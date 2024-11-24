@@ -9,7 +9,7 @@
 
 #include "helpers/TextUtils.h"
 #include "compressor/FileCompressor.h"
-
+#include"compressor/CompressorSettings.h"
 
 namespace fs = std::filesystem;
 const fs::path INPUT_DIR = fs::current_path() / "..\\input";
@@ -37,13 +37,14 @@ int main()
         //"..\\input\\raw\\color.raw",
         //"..\\input\\txt\\russian_1mb.txt",
         //"..\\input\\txt\\enwik7.txt"
-        "..\\input\\txt\\small2.txt"
+        //"..\\input\\txt\\small2.txt"
     };
 
-    std::string compressionMethod = "RLE";
+    std::string compressionMethod = "LZ77";
+
+    //CompressorSettings::SetLZ77SearchBufferSize(16384);
 
     std::cout << "Start..." << std::endl;
-
 
     // TEST CODE
     for (auto path : PATHS)
