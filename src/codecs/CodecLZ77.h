@@ -37,12 +37,12 @@ private:
 protected:
     struct data {
         uint32_t inputStrLength;
-        Array<uint16_t> lengths;
         Array<uint16_t> offsets;
+        Array<uint8_t> lengths;
         StringL<charType> chars;
 
         data() = default;
-        data(const uint32_t inputStrLength_, const Array<uint16_t>& lengths_, const Array<uint16_t>& offsets_, const StringL<charType> chars_) :
+        data(const uint32_t inputStrLength_, const Array<uint16_t>& offsets_, const Array<uint8_t>& lengths_, const StringL<charType> chars_) :
             inputStrLength(inputStrLength_), lengths(lengths_), offsets(offsets_), chars(chars_) {}
 
         const StringL<charType> toString() const;
@@ -81,7 +81,10 @@ void CodecLZ77<charType>::Encode(const StringL<charType>& text, std::ofstream& o
     
         // define offset and length
         uint32_t offset = 0;
-        uint16_t length = 0;
+        uint8_t length = 0;
+
+        // define index of maxStr within a text
+        int32_t index = searchBufferStart;
 
         // find maximum string from lookahead buffer in search buffer
         while (flag && (i < text.size()) && (maxStr.size() < lookaheadBufferSize))
@@ -89,8 +92,8 @@ void CodecLZ77<charType>::Encode(const StringL<charType>& text, std::ofstream& o
             // increase maxStr
             maxStr.push_back(text[i]);
 
-            int32_t index = find(maxStr, text, searchBufferStart, searchBufferEnd);
-            if (index == -1ll)
+            index = find(maxStr, text, index, searchBufferEnd);
+            if (index == -1)
             {
                 break;
             }
@@ -102,7 +105,7 @@ void CodecLZ77<charType>::Encode(const StringL<charType>& text, std::ofstream& o
 
         // write length, offset and character if needed
         FileUtils::AppendValueBinary(outputFile, static_cast<uint16_t>(offset));
-        FileUtils::AppendValueBinary(outputFile, length);
+        FileUtils::AppendValueBinary(outputFile, static_cast<uint8_t>(length));
         if (length == 0) {
             if (useUTF8) {
                 CodecUTF8::EncodeCharToBinaryFile(outputFile, text[i++]);
@@ -121,11 +124,11 @@ StringL<charType> CodecLZ77<charType>::Decode(std::ifstream& inputFile, const bo
     StringL<charType> decoded(inputStrLength);
     uint32_t stringPointer = 0; // pointer within abstract input text (text before encoding)
 
-    uint16_t offset, length;
+    uint32_t offset, length;
     while (decoded.size() < inputStrLength)
     {
         offset = FileUtils::ReadValueBinary<uint16_t>(inputFile);
-        length = FileUtils::ReadValueBinary<uint16_t>(inputFile);
+        length = FileUtils::ReadValueBinary<uint8_t>(inputFile);
         if (length == 0)
         {
             if (useUTF8) {
@@ -187,7 +190,7 @@ typename CodecLZ77<charType>::data CodecLZ77<charType>::encodeToData(const Strin
     const uint32_t searchBufferSize = CodecLZ77<charType>::searchBufferSize;
     const uint32_t lookaheadBufferSize = CodecLZ77<charType>::lookaheadBufferSize;
 
-    Array<uint16_t> lengths(text.size());
+    Array<uint8_t> lengths(text.size());
     Array<uint16_t> offsets(text.size());
     StringL<charType> chars(text.size());
 
@@ -205,7 +208,10 @@ typename CodecLZ77<charType>::data CodecLZ77<charType>::encodeToData(const Strin
     
         // define offset and length
         uint32_t offset = 0;
-        uint16_t length = 0;
+        uint8_t length = 0;
+
+        // define index of maxStr within a text
+        int32_t index = searchBufferStart; 
 
         // find maximum string from lookahead buffer in search buffer
         while (flag && (i < text.size()) && (maxStr.size() < lookaheadBufferSize))
@@ -213,7 +219,7 @@ typename CodecLZ77<charType>::data CodecLZ77<charType>::encodeToData(const Strin
             // increase maxStr
             maxStr.push_back(text[i]);
 
-            int index = find(maxStr, text, searchBufferStart, searchBufferEnd);
+            index = find(maxStr, text, index, searchBufferEnd);
             if (index == -1)
             {
                 break;
@@ -225,12 +231,12 @@ typename CodecLZ77<charType>::data CodecLZ77<charType>::encodeToData(const Strin
         }
 
         // save offset, length and character if needed
-        offsets.push_back(offset);
-        lengths.push_back(length);
+        offsets.push_back(static_cast<uint16_t>(offset));
+        lengths.push_back(static_cast<uint8_t>(length));
         if (length == 0) { chars.push_back(text[i++]); }
     }
     
-    return data(text.size(), lengths, offsets, chars);
+    return data(text.size(), offsets, lengths, chars);
 }
 
 template <typename charType>
@@ -297,8 +303,8 @@ const StringL<charType> CodecLZ77<charType>::data::toString() const
         {
             result.push_back(static_cast<unsigned char>(offsets[i] >> 8));
             result.push_back(static_cast<unsigned char>(offsets[i] & 0b11111111));
-            result.push_back(static_cast<unsigned char>(lengths[i] >> 8));
-            result.push_back(static_cast<unsigned char>(lengths[i] & 0b11111111));
+            //result.push_back(static_cast<unsigned char>(lengths[i] >> 8));
+            result.push_back(static_cast<unsigned char>(lengths[i]));
             if (lengths[i] == 0) { result.push_back(chars[charsPointer++]); }
         }
     }
@@ -306,8 +312,8 @@ const StringL<charType> CodecLZ77<charType>::data::toString() const
     {
         for (size_t i = 0; i < lengths.size(); ++i)
         {
-            result.push_back(static_cast<char16_t>(offsets[i]));
-            result.push_back(static_cast<char16_t>(lengths[i]));
+            result.push_back(static_cast<unsigned short>(offsets[i]));
+            result.push_back(static_cast<unsigned short>(lengths[i]));
             if (lengths[i] == 0) { result.push_back(chars[charsPointer++]); }
         }
     }
@@ -315,8 +321,7 @@ const StringL<charType> CodecLZ77<charType>::data::toString() const
     {
         for (size_t i = 0; i < lengths.size(); ++i)
         {
-            result.push_back(static_cast<char32_t>(offsets[i]));
-            result.push_back(static_cast<char32_t>(lengths[i]));
+            result.push_back(static_cast<unsigned int>((offsets[i] << 8) + lengths[i]));
             if (lengths[i] == 0) { result.push_back(chars[charsPointer++]); }
         }
     }
@@ -337,41 +342,46 @@ const typename CodecLZ77<charType>::data CodecLZ77<charType>::data::fromString(c
     result.lengths.resize(inputStrLength);
     result.chars.resize(inputStrLength);
 
-    uint16_t offset, length;
+    uint16_t offset;
+    uint8_t length;
     size_t i = 0; // pointer within a string
     if (std::is_same<charType, unsigned char>::value)
     {
         while (i < str.size())
         {
             offset = (str[i] << 8) + str[i + 1];
-            length = (str[i + 2] << 8) + str[i + 3];
+            length = str[i + 2];
             result.offsets.push_back(offset);
             result.lengths.push_back(length);
-            i += 4;
+            i += 3;
             if (length == 0) { result.chars.push_back(str[i++]); }
         }
     }
-    else if (std::is_same<charType, char16_t>::value)
+    else if ((std::is_same<charType, char16_t>::value) || (std::is_same<charType, unsigned short>::value))
     {
         while (i < str.size())
         {
-            length = static_cast<uint16_t>(str[i++]);
             offset = static_cast<uint16_t>(str[i++]);
-            result.offsets.push_back(length);
-            result.lengths.push_back(offset);
+            length = static_cast<uint8_t>(str[i++]);
+            result.lengths.push_back(length);
+            result.offsets.push_back(offset);
+            if (length == 0) { result.chars.push_back(str[i++]); }
+        }
+    }
+    else if ((std::is_same<charType, char32_t>::value) || (std::is_same<charType, unsigned int>::value))
+    {
+        while (i < str.size())
+        {
+            offset = static_cast<uint16_t>(str[i] & 0b00000000111111111111111100000000);
+            length = static_cast<uint8_t>(str[i++] & 0b00000000000000000000000011111111);
+            result.offsets.push_back(offset);
+            result.lengths.push_back(length);
             if (length == 0) { result.chars.push_back(str[i++]); }
         }
     }
     else
     {
-        while (i < str.size())
-        {
-            length = static_cast<uint16_t>(str[i++]);
-            offset = static_cast<uint16_t>(str[i++]);
-            result.offsets.push_back(length);
-            result.lengths.push_back(offset);
-            if (length == 0) { result.chars.push_back(str[i++]); }
-        }
+        throw std::runtime_error("Error: Unsupported char type in CodecLZ77::data::fromString()");
     }
 
     return result;
