@@ -116,7 +116,7 @@ void FileCompressor::compress(const char* inputPath, std::ofstream& outputFile, 
     } else if (codecType == "AC") {
         CodecAC<charType>::Encode(inputStr, outputFile, useUTF8);
     } else if (codecType == "HA") {
-        CodecHA<charType>::Encode(inputStr, outputFile, useUTF8);  
+        CodecHA<charType>::Encode(inputStr, outputFile, useUTF8);
     } else if (codecType == "LZ77") {
         CodecLZ77<charType>::Encode(inputStr, outputFile, useUTF8);  
     } else if (codecType == "BWT+RLE") {

@@ -12,6 +12,8 @@
 #include "../helpers/StringL.h"
 #include "../helpers/Array.h"
 
+#include "../compressor/CompressorSettings.h"
+
 /**
  * CodecHA (encoder - decoder).
  * 
@@ -38,10 +40,6 @@ private:
     static void sortInParallel(Array<charType>& alphabet, Array<uint32_t>& frequencies);
     static void encodeNumbersEffectively(std::ofstream& outputFile, const Array<uint32_t>& numbers);
     static Array<uint32_t> decodeNumbersEffectively(std::ifstream& inputFile, const uint16_t numberOfElements);
-
-    static StringL<charType> decode(std::ifstream& inputFile);
-
-    static const size_t maxSizeOfBlock_ = 10000;
 protected:
     struct data_local {
         uint16_t alphabetLength;
@@ -72,7 +70,7 @@ protected:
 template <typename charType>
 void CodecHA<charType>::Encode(StringL<charType>& inputStr, std::ofstream& outputFile, const bool useUTF8)
 {
-    const size_t maxSizeOfBlock = CodecHA::maxSizeOfBlock_; // to limit RAM consumption
+    const size_t maxSizeOfBlock = CompressorSettings::GetHuffmanBlockSize(); // to limit RAM consumption
     StringL<charType> localString(maxSizeOfBlock); // local string to make huffman algorithm
     size_t stringPointer = 0; // pointer to the end of localString within an inputStr
     Array<charType> alphabet;
@@ -144,7 +142,7 @@ void CodecHA<charType>::Encode(StringL<charType>& inputStr, std::ofstream& outpu
 template <typename charType>
 StringL<charType> CodecHA<charType>::Decode(std::ifstream& inputFile, const bool useUTF8)
 {
-    const size_t maxSizeOfBlock = CodecHA::maxSizeOfBlock_;
+    const size_t maxSizeOfBlock = CompressorSettings::GetHuffmanBlockSize();
 
     uint32_t inputStrSize = FileUtils::ReadValueBinary<uint32_t>(inputFile);
     uint32_t localDataCount = inputStrSize / maxSizeOfBlock + 1;
@@ -326,7 +324,7 @@ typename CodecHA<charType>::data CodecHA<charType>::encodeToData(const StringL<c
 {
     Array<data_local> localDataItems;
 
-    const size_t maxSizeOfBlock = CodecHA::maxSizeOfBlock_; // to limit RAM consumption
+    const size_t maxSizeOfBlock = CompressorSettings::GetHuffmanBlockSize(); // to limit RAM consumption
     StringL<charType> localString(maxSizeOfBlock); // local string to make huffman algorithm
     size_t stringPointer = 0; // pointer to the end of localString within an inputStr
     Array<charType> alphabet;
@@ -409,7 +407,7 @@ void CodecHA<charType>::encodeData(std::ofstream& outputFile, const data& data, 
 template <typename charType>
 StringL<charType> CodecHA<charType>::decodeData(const data& data)
 {
-    const size_t maxSizeOfBlock = CodecHA::maxSizeOfBlock_;
+    const size_t maxSizeOfBlock = CompressorSettings::GetHuffmanBlockSize();
 
     uint32_t localDataCount = data.inputStrSize / maxSizeOfBlock + 1;
     uint32_t lastBlockSize = data.inputStrSize % maxSizeOfBlock;

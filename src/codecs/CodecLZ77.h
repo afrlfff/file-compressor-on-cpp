@@ -7,6 +7,8 @@
 #include "../helpers/StringL.h"
 #include "../helpers/Array.h"
 
+#include "../compressor/CompressorSettings.h"
+
 
 /**
  * CodecLZ77 (encoder - decoder).
@@ -32,7 +34,6 @@ private:
     CodecLZ77() = default;
     static int find(const StringL<charType>& target, const StringL<charType>& original, const uint32_t startIndex, const uint32_t endIndex);
 
-    const static uint32_t searchBufferSize = 16384;
     const static uint32_t lookaheadBufferSize = 128;
 protected:
     struct data {
@@ -64,7 +65,7 @@ void CodecLZ77<charType>::Encode(const StringL<charType>& text, std::ofstream& o
 {
     FileUtils::AppendValueBinary(outputFile, static_cast<uint32_t>(text.size()));
 
-    const uint32_t searchBufferSize = CodecLZ77<charType>::searchBufferSize;
+    const uint32_t searchBufferSize = CompressorSettings::GetLZ77SearchBufferSize();
     const uint32_t lookaheadBufferSize = CodecLZ77<charType>::lookaheadBufferSize;
 
     uint32_t i = 0; // pointer within a text
@@ -187,7 +188,7 @@ int CodecLZ77<charType>::find(const StringL<charType>& target, const StringL<cha
 template <typename charType>
 typename CodecLZ77<charType>::data CodecLZ77<charType>::encodeToData(const StringL<charType>& text)
 {
-    const uint32_t searchBufferSize = CodecLZ77<charType>::searchBufferSize;
+    const uint32_t searchBufferSize = CompressorSettings::GetLZ77SearchBufferSize();
     const uint32_t lookaheadBufferSize = CodecLZ77<charType>::lookaheadBufferSize;
 
     Array<uint8_t> lengths(text.size());
