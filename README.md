@@ -37,10 +37,12 @@
 ## Как использовать
 ### Сборка проекта
 Для сборки проекта необходимо использовать компилятор C++ (например, `g++`). Перейдите в папку проекта и выполните следующие команды в терминале:
+
 ```g++ -o .\bin\file-compressor .\src\main.cpp```
 
 ### Запуск компрессора
 После сборки проекта вы можете запустить компрессор с помощью следующей команды:
+
 ```./file-compressor [тип обработки] [опции] [входной файл] [выходной файл]```
 
 #### Тип обработки:
@@ -58,4 +60,11 @@
 * `LZ77+HA`: Использовать комбинацию LZ77 + HA.
 
 ### Пример использования:
-```./bin/file-compressor compress AC input.txt output.bin```
+
+Сжатие:
+
+```./bin/file-compressor compress AC input.txt compressed_output.bin```
+
+Восстановление:
+
+```./bin/file-compressor decompress AC compressed_output.bin decompressed_input.txt```
